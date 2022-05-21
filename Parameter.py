@@ -1,6 +1,6 @@
 import argparse
-from pathlib import Path
 import os
+from pathlib import Path
 
 
 class Parameters:
@@ -31,5 +31,5 @@ class Parameters:
         :return: parser
         """
         self.parser.add_argument('--var_dir', type=lambda x: Path(x).absolute(),
-                            help="Location of var folder",
-                            default=Path(os.path.realpath(os.path.dirname(__file__)), "var"))
+                                 help="Location of var folder",
+                                 default=Path(os.path.realpath(os.path.dirname(__file__)), "var"))

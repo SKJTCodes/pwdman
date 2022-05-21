@@ -1,8 +1,8 @@
-import os
 import logging
 import logging.handlers
-from pathlib import Path
+import os
 import sys
+from pathlib import Path
 
 
 class Logger:
@@ -67,5 +67,3 @@ class ColoredFormatter(logging.Formatter):
     @staticmethod
     def formatter_message(msg):
         return msg.replace("$RESET", RESET_SEQ).replace("$BOLD", BOLD_SEQ)
-
-

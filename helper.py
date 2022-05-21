@@ -1,9 +1,10 @@
-import re
 import datetime as dt
 import operator
+import re
 from datetime import timedelta
-from pandas.tseries.offsets import BDay
+
 import pandas as pd
+from pandas.tseries.offsets import BDay
 
 
 def sort_num_string(data_list):
@@ -12,6 +13,7 @@ def sort_num_string(data_list):
     :param data_list: list of strings
     :return: sorted list
     """
+
     def atoi(text):
         return int(text) if text.isdigit() else text
 
@@ -53,6 +55,3 @@ def date_delta(date=None, delta=0, out_fmt="%Y%m%d", in_fmt=None, biz_day=False)
         n_date = op[key](date, BDay(abs(delta)) if biz_day else timedelta(days=abs(delta)))
 
     return n_date if out_fmt is None else n_date.strftime(out_fmt)
-
-
-
