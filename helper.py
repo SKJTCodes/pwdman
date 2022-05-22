@@ -1,13 +1,27 @@
 import datetime as dt
+import math
 import operator
+import pickle
 import re
 from datetime import timedelta
-import pickle
+from pathlib import Path
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 
 import bcrypt
 import keyring
 import pandas as pd
+from cryptography.fernet import Fernet
 from pandas.tseries.offsets import BDay
+
+
+def get_ext(file_path):
+    fp = file_path
+    if isinstance(file_path, str):
+        fp = Path(file_path)
+
+    assert fp.is_file(), f"Path provided is not a file. ({fp})"
+
+    return fp.suffix
 
 
 def creds_man(app_name, uname, mode="store", pw=None):
@@ -16,20 +30,31 @@ def creds_man(app_name, uname, mode="store", pw=None):
     check keyring data from windows cred manager
     :param app_name: where to get password from
     :param uname: username
-    :param mode: select between "store" and "check"
+    :param mode: selection
+                 - store
+                 - check
+                 - get_keyring = returns keyring password value (will be bcrypt encrypted)
     :param pw: password
     :return:
     """
-    assert mode == "store" or mode == "check", "Selected mode is unavailable"
-    assert pw is not None, "Please include password to encrypt or password to be checked."
+    assert mode == "store" or mode == "check" or mode == "get_keyring", "Selected mode is unavailable"
 
     if mode == "store":
+        assert pw is not None, "Please include password to encrypt or password to be checked."
+
         hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode('utf-8')
         keyring.set_password(app_name, uname, hashed)
         return hashed
+
+    elif mode == "get_keyring":
+        return keyring.get_password(app_name, uname)
+
     else:
-        dec_pw = keyring.get_password(app_name, uname).encode('utf-8')
-        return bcrypt.checkpw(pw.encode(), dec_pw)
+        assert pw is not None, "Please include password to encrypt or password to be checked."
+
+        dec_pw = keyring.get_password(app_name, uname)
+        assert dec_pw is not None, f"Unable to find password for app_name: {app_name}, user: {uname}"
+        return bcrypt.checkpw(pw.encode(), dec_pw.encode('utf-8'))
 
 
 def pickle_file(mode, fname="./pickle_data.pickle", data=None):
@@ -100,3 +125,41 @@ def date_delta(date=None, delta=0, out_fmt="%Y%m%d", in_fmt=None, biz_day=False)
         n_date = op[key](date, BDay(abs(delta)) if biz_day else timedelta(days=abs(delta)))
 
     return n_date if out_fmt is None else n_date.strftime(out_fmt)
+
+
+class Crypto:
+    def __init__(self, key_file=None):
+        if key_file is None:
+            self.key = Fernet.generate_key()
+        else:
+            with open(key_file, 'rb') as r:
+                self.key = r.read()
+
+        self.fer = Fernet(self.key)
+
+    def get_key(self):
+        return self.key
+
+    def set_key(self, new_key, replace=False):
+        """
+        Extend key with new_key or replace current key with another key
+        :param new_key: string to add to key
+        :param replace: replace = True replace the whole key while False appends text to key
+        :return: None
+        """
+        # key can only be multiples of 4
+        if replace:
+            assert len(new_key) >= 32, f"Key used for encryption must be >= 32 in length. key length = {len(new_key)}"
+            new_key = new_key[:32]
+            self.key = urlsafe_b64encode(new_key.encode())
+
+        else:
+            self.key = self.key + new_key.encode()
+
+        self.fer = Fernet(self.key)
+
+    def encrypt(self, data):
+        return self.fer.encrypt(data.encode())
+
+    def decrypt(self, enc_text):
+        return self.fer.decrypt(enc_text.encode())
