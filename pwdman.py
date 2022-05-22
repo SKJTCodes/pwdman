@@ -15,8 +15,6 @@ log = Logger(log_path).get_logger()
 
 
 def main():
-    assert args.mode == "add" or args.mode == "view", f"Mode: {args.mode}, does not exist."
-
     # Get Username and Password
     if args.masteruser is None:
         usr = input("Master Username: ")
@@ -44,6 +42,17 @@ def main():
 
         log.info(f"Saving Creds to {args.cred_file}")
         cred_df.to_csv(args.cred_file, index=False)
+
+    elif args.mode == "mass_upload":
+        assert args.mass_file.is_file(), f"File not found. {args.mass_file}"
+
+        df = pd.read_csv(args.mass_file)
+        for i, r in df.iterrows():
+            cred_df = add(c, cred_df, r)
+
+        log.info(f"Saving Creds to {args.cred_file}")
+        cred_df.to_csv(args.cred_file, index=False)
+
     else:
         while True:
             srch = input("Search: ")
@@ -55,8 +64,10 @@ def main():
                 srch = ".*"
 
             df = view(c, cred_df, srch)
+
             if df.shape[0] == 0:
                 log.warning("No Results Found.")
+
             else:
                 print(df)
 
@@ -71,7 +82,8 @@ def view(c, cred_df, search):
     """
     log.info("Search Credentials ...")
 
-    cred_df = cred_df.loc[cred_df["Details"].str.contains(search, regex=True, na=False)].copy()
+    cred_df = cred_df.loc[(cred_df["Details"].str.contains("(?i)" + search, regex=True, na=False) |
+                           cred_df["Category"].str.contains("(?i)" + search, regex=True, na=False))].copy()
     cred_df["Password"] = cred_df["Password"].apply(lambda x: c.decrypt(x))
     return cred_df
 
@@ -84,7 +96,7 @@ def read_creds(cred_path):
     """
     # create empty dataframe if file does not exist.
     if not cred_path.is_file():
-        df = pd.DataFrame(columns=["Username", "Password", "Details"])
+        df = pd.DataFrame(columns=["Username", "Password", "Category", "Details"])
     else:
         if h.get_ext(cred_path) == ".csv":
             df = pd.read_csv(cred_path)
@@ -94,20 +106,28 @@ def read_creds(cred_path):
     return df
 
 
-def add(c, cred_df):
+def add(c, cred_df, creds=None):
     """
     add new creds to file
     :param c: crypto class, used for decrypt or encrypt text
     :param cred_df: credentials DataFrame
+    :param creds: Credential to add, if None user will be prompted to key in
     :return: vault dataframe
     """
-    log.info("Please Add Credential details ...")
+    if creds is None:
+        log.info("Please Add Credential details ...")
+        cat = input("Category: ")
+        usr = input("Username: ")
+        pwd = getpass.getpass("Password: ")
+        det = input("Details: ")
+    else:
+        cat = creds["Category"]
+        usr = creds["Username"]
+        pwd = creds["Password"]
+        det = creds["Details"]
+        log.info(f"Added Credential details ({usr})...")
 
-    det = input("Details: ")
-    usr = input("Username: ")
-    pwd = getpass.getpass("Password: ")
-
-    data = {"Username": usr, "Password": c.encrypt(pwd), "Details": det}
+    data = {"Username": usr, "Password": c.encrypt(pwd), "Details": det, "Category": cat}
 
     cred_df = cred_df.append(data, sort=False, ignore_index=True)
     return cred_df

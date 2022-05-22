@@ -34,14 +34,20 @@ class Parameters:
         )
         self.parser.add_argument(
             "--mode",
-            choices=["view", "add"],
-            help="insert mode, view or add."
+            choices=["view", "add", "mass_upload"],
+            help="Select mode: view, add, mass_upload"
         )
         self.parser.add_argument(
             "--cred_file",
             help="File where credentials are stored for either viewing or adding",
             type=lambda x: Path(x).absolute(),
             default="./creds.csv"
+        )
+        self.parser.add_argument(
+            "--mass_file",
+            type=lambda x: Path(x).absolute(),
+            help="File to mass upload",
+            default="./raw_pwd.csv"
         )
 
         return self.parser.parse_args()
