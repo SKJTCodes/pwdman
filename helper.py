@@ -12,7 +12,8 @@ from pandas.tseries.offsets import BDay
 
 def creds_man(app_name, uname, mode="store", pw=None):
     """
-    encrypt string with bcrypt
+    encrypt string with bcrypt and store encrypted string with keyring.
+    check keyring data from windows cred manager
     :param app_name: where to get password from
     :param uname: username
     :param mode: select between "store" and "check"
@@ -23,12 +24,12 @@ def creds_man(app_name, uname, mode="store", pw=None):
     assert pw is not None, "Please include password to encrypt or password to be checked."
 
     if mode == "store":
-        hashed = bcrypt.hashpw(pw, bcrypt.gensalt())
+        hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode('utf-8')
         keyring.set_password(app_name, uname, hashed)
         return hashed
     else:
-        dec_pw = keyring.get_password(app_name, uname)
-        return bcrypt.checkpw(dec_pw.encode(), pw)
+        dec_pw = keyring.get_password(app_name, uname).encode('utf-8')
+        return bcrypt.checkpw(pw.encode(), dec_pw)
 
 
 def pickle_file(mode, fname="./pickle_data.pickle", data=None):
