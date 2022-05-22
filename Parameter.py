@@ -22,6 +22,27 @@ class Parameters:
             self._default_args()
 
         """ Proj Arguments """
+        self.parser.add_argument(
+            '--masteruser',
+            default=os.environ["COMPUTERNAME"],
+            help="Master Username",
+        )
+        self.parser.add_argument(
+            '--masterpwd',
+            default=None,
+            help="Master Password",
+        )
+        self.parser.add_argument(
+            "--mode",
+            choices=["view", "add"],
+            help="insert mode, view or add."
+        )
+        self.parser.add_argument(
+            "--cred_file",
+            help="File where credentials are stored for either viewing or adding",
+            type=lambda x: Path(x).absolute(),
+            default="./creds.csv"
+        )
 
         return self.parser.parse_args()
 
@@ -30,6 +51,10 @@ class Parameters:
         Add all default arguments here.
         :return: parser
         """
-        self.parser.add_argument('--var_dir', type=lambda x: Path(x).absolute(),
-                                 help="Location of var folder",
-                                 default=Path(os.path.realpath(os.path.dirname(__file__)), "var"))
+        self.parser.add_argument(
+            '--var_dir',
+            type=lambda x: Path(x).absolute(),
+            help="Location of var folder",
+            # return current directory + var
+            default=Path(os.path.realpath(os.path.dirname(__file__)), "var")
+        )
