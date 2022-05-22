@@ -2,9 +2,53 @@ import datetime as dt
 import operator
 import re
 from datetime import timedelta
+import pickle
 
+import bcrypt
+import keyring
 import pandas as pd
 from pandas.tseries.offsets import BDay
+
+
+def creds_man(app_name, uname, mode="store", pw=None):
+    """
+    encrypt string with bcrypt
+    :param app_name: where to get password from
+    :param uname: username
+    :param mode: select between "store" and "check"
+    :param pw: password
+    :return:
+    """
+    assert mode == "store" or mode == "check", "Selected mode is unavailable"
+    assert pw is not None, "Please include password to encrypt or password to be checked."
+
+    if mode == "store":
+        hashed = bcrypt.hashpw(pw, bcrypt.gensalt())
+        keyring.set_password(app_name, uname, hashed)
+        return hashed
+    else:
+        dec_pw = keyring.get_password(app_name, uname)
+        return bcrypt.checkpw(dec_pw.encode(), pw)
+
+
+def pickle_file(mode, fname="./pickle_data.pickle", data=None):
+    """
+    read/write data to a pickle file
+    :param mode: types: "read", "write". choose between read and write operation
+    :param fname: file location of data
+    :param data: data to write. only required if mode is "write".
+    :return: if read, returns file data else return file location
+    """
+    assert mode == "read" or mode == "write", "mode does not exist."
+
+    if mode == "read":
+        with open(fname, 'rb') as r:
+            return pickle.load(r)
+    else:
+        assert data is not None, f"mode: {mode}, please use the data parameter to add data to pickle."
+        with open(fname, 'wb') as w:
+            pickle.dump(data, w)
+        return fname
 
 
 def sort_num_string(data_list):
