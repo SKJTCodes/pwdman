@@ -159,7 +159,7 @@ class Crypto:
         self.fer = Fernet(self.key)
 
     def encrypt(self, data):
-        return self.fer.encrypt(data.encode())
+        return self.fer.encrypt(data.encode()).decode()
 
     def decrypt(self, enc_text):
-        return self.fer.decrypt(enc_text.encode())
+        return self.fer.decrypt(enc_text.encode()).decode()

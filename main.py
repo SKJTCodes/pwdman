@@ -31,30 +31,57 @@ def main():
     # Check if password matches with keyring and set password as key for decryption
     log.info("Validating Credentials ...")
     assert h.creds_man("pwdman", usr, mode="check", pw=pwd), "Failed to Validate Credentials"
+    log.info("Validation Successful ...")
 
     # run add feature or view feature
     c = h.Crypto()
     c.set_key(h.creds_man("pwdman", usr, mode="get_keyring"), replace=True)
 
+    cred_df = read_creds(args.cred_file)
+
     if args.mode == "add":
-        cred_df = read_creds(args.cred_file)
         cred_df = add(c, cred_df)
+
         log.info(f"Saving Creds to {args.cred_file}")
         cred_df.to_csv(args.cred_file, index=False)
     else:
-        view(c)
+        while True:
+            srch = input("Search: ")
+            if srch.lower() == "q":
+                log.info("Quit")
+                return
+
+            elif srch == "*":
+                srch = ".*"
+
+            df = view(c, cred_df, srch)
+            if df.shape[0] == 0:
+                log.warning("No Results Found.")
+            else:
+                print(df)
 
 
-def view(c):
+def view(c, cred_df, search):
     """
     view all creds
     :param c: crypto class, used for decrypt or encrypt text
-    :return:
+    :param cred_df: credential vault DataFrame
+    :param search: regex search result
+    :return: vault dataframe
     """
-    pass
+    log.info("Search Credentials ...")
+
+    cred_df = cred_df.loc[cred_df["Details"].str.contains(search, regex=True, na=False)].copy()
+    cred_df["Password"] = cred_df["Password"].apply(lambda x: c.decrypt(x))
+    return cred_df
 
 
 def read_creds(cred_path):
+    """
+    find and read creds file, if don't exist, will create an empty df
+    :param cred_path: path to creds.csv
+    :return: dataframe of creds
+    """
     # create empty dataframe if file does not exist.
     if not cred_path.is_file():
         df = pd.DataFrame(columns=["Username", "Password", "Details"])
@@ -72,7 +99,7 @@ def add(c, cred_df):
     add new creds to file
     :param c: crypto class, used for decrypt or encrypt text
     :param cred_df: credentials DataFrame
-    :return:
+    :return: vault dataframe
     """
     log.info("Please Add Credential details ...")
 
